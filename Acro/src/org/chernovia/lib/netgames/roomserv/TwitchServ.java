@@ -53,15 +53,15 @@ public class TwitchServ extends PircBot implements NetServ {
 		//tell(sender,"Whisper to me like so: /w " + this.name + " " + message);
 	}
 	
-	public void onPrivateMessage(String sender, 
-			String login, String hostname, String message) {
-		if (sender.equalsIgnoreCase("jtv") && message.startsWith(
-		"Your message was not sent")) {
-			try { Thread.sleep(2000); } catch (InterruptedException ignore) {}
-			send(lastMsg);
-		}
-		else newMsg(getConn(sender), message);
-	}
+	//public void onPrivateMessage(String sender, 
+	//		String login, String hostname, String message) {
+	//	if (sender.equalsIgnoreCase("jtv") && message.startsWith(
+	//	"Your message was not sent")) {
+	//		try { Thread.sleep(2000); } catch (InterruptedException ignore) {}
+	//		send(lastMsg);
+	//	}
+	//	else newMsg(getConn(sender), message);
+	//}
 		
 	public void onJoin(String channel, String sender, String login, String hostname) {
 		System.out.println(getConn(sender).getHandle() + " joins.");
@@ -117,12 +117,10 @@ public class TwitchServ extends PircBot implements NetServ {
 		tell(handle,msg);
 	}
 	public void tell(String handle, String msg) {
-		//whisperSrv.
-		send("/w " + handle + " " + msg); 
+		sendRawLine("PRIVMSG " + channel + " :/w " + handle + " " + msg); 
 	}
 	public void tell(String h1, String h2, String msg) { 
-		//whisperSrv.
-		send("/w" + h2 + " " + h1 + " tells you: " + msg);
+		sendRawLine("PRIVMSG " + channel + " :/w" + h2 + " " + h1 + " tells you: " + msg);
 	}
 	public void send(String msg) { 
 		lastMsg = msg; //sendMessage(channel,trim(msg));
