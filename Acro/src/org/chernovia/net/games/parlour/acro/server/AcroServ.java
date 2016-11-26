@@ -20,6 +20,7 @@ public class AcroServ implements ConnListener {
 	static String TOPFILE = "res/topics.txt";
 	static String HELPFILE = "res/acrohelp.txt";
 	static String ABCDEF = "res/deflet";
+	String acroCmdPfx = "!", mgrCmdPfx = "~";
 	AcroGame[] games;
 	NetServ serv; 
 	
@@ -64,14 +65,14 @@ public class AcroServ implements ConnListener {
 		System.out.println("New Message: " + conn + ": " + msg);
 		AcroGame G = conn.getChan() >= 0 ? games[conn.getChan()] : null;
 		try {
-			if (msg.equals("") || msg.equals("~") || msg.equals("!")) { 
+			if (msg.equals("") || msg.equals(mgrCmdPfx) || msg.equals(acroCmdPfx)) { 
 				conn.tell("Eh?"); 
 			}
 			else if (msg.equals("?")) conn.tell(showCmds(),true,false);
-			else if (msg.charAt(0) == '~') {
+			else if (msg.startsWith(mgrCmdPfx)) {
 				mgrCmd(G,conn,msg.substring(1));
 			}
-			else if (msg.charAt(0) == '!') {
+			else if (msg.startsWith(acroCmdPfx)) {
 				acroCmd(G,conn,msg.substring(1));
 			}
 			else {
@@ -94,15 +95,12 @@ public class AcroServ implements ConnListener {
 	}
 
 	private void gameTell(AcroGame G, Connection conn, String msg) {
-		//if (msg.charAt(0) == '!' && msg.length() > 0) acroCmd(G,conn,msg.substring(1));
-		//else 
 		switch(G.getMode()) {
 		case AcroGame.MOD_ACRO:
 			if (!G.isLegal(msg.toUpperCase()))
 				conn.tell("Illegal acro: " + msg);
 			else G.newAcro(conn,msg);
 			break;
-		//TODO: fix numberFormatError voting bug (use MiscUtil?) -- fixed?
 		case AcroGame.MOD_VOTE: 
 			int i = MiscUtil.strToInt(msg);
 			if (i > 0 && G.getNumAcros() >= i) {
@@ -121,7 +119,7 @@ public class AcroServ implements ConnListener {
 			conn.tell("New game coming...");
 			break;
 		default:
-			conn.tell("Idle. Tell me !start.");
+			conn.tell("Idle. Tell me " + acroCmdPfx + "start.");
 		}
 	}
 
@@ -263,7 +261,7 @@ public class AcroServ implements ConnListener {
 					G.interrupt();
 				}
 				else if (G.getMode() >= AcroGame.MOD_NEW) {
-					conn.tell("Already playing!"); //TODO: be more specific
+					conn.tell("Already playing!");
 				}
 				else conn.tell("Current mode: " + G.getMode());
 			}
@@ -318,30 +316,30 @@ public class AcroServ implements ConnListener {
 	
 	public String showCmds() {
 		return "Commands: " + CR +
-		"~off" + CR +
-		"~idle" + CR +
-		"~reset" + CR +
-		"~pause" + CR +
-		"~shouting" + CR +
-		"~flattime" + CR +
-		"~reval" + CR +
-		"~topics" + CR +
-		"~tiebonus" + CR +
-		"~letfiles" + CR +
-		"~loadlet" + CR +
-		"~channel" + CR +
-		"~acrotime" + CR +
-		"~votetime" + CR +
-		"~waittime" + CR +
-		"~dump" + CR +
-		"!help" + CR +
-		"!start" + CR +
-		"!ver" + CR +
-		"!vars" + CR +
-		"!letters" + CR +
-		"!acro" + CR +
-		"!finger" + CR +
-		"!topten" + CR +
+		mgrCmdPfx + "off" + CR +
+		mgrCmdPfx + "idle" + CR +
+		mgrCmdPfx + "reset" + CR +
+		mgrCmdPfx + "pause" + CR +
+		mgrCmdPfx + "shouting" + CR +
+		mgrCmdPfx + "flattime" + CR +
+		mgrCmdPfx + "reval" + CR +
+		mgrCmdPfx + "topics" + CR +
+		mgrCmdPfx + "tiebonus" + CR +
+		mgrCmdPfx + "letfiles" + CR +
+		mgrCmdPfx + "loadlet" + CR +
+		mgrCmdPfx + "channel" + CR +
+		mgrCmdPfx + "acrotime" + CR +
+		mgrCmdPfx + "votetime" + CR +
+		mgrCmdPfx + "waittime" + CR +
+		mgrCmdPfx + "dump" + CR +
+		acroCmdPfx + "help" + CR +
+		acroCmdPfx + "start" + CR +
+		acroCmdPfx + "ver" + CR +
+		acroCmdPfx + "vars" + CR +
+		acroCmdPfx + "letters" + CR +
+		acroCmdPfx + "acro" + CR +
+		acroCmdPfx + "finger" + CR +
+		acroCmdPfx + "topten" + CR +
 		"";
 	}
 
