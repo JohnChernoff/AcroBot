@@ -1,12 +1,12 @@
-//TODO: fix resource file locations in the ancient libraries
+//TODO: 
 //history is a bit wonky (spam, topics, etc)
-//transfer commands to whispers
-//whispers are massively kludgy
 //line breaks are weird for voting results
 
 package org.chernovia.net.games.parlour.acro.server;
 
 import java.util.StringTokenizer;
+import java.util.Vector;
+
 import org.chernovia.lib.misc.MiscUtil;
 import org.chernovia.lib.netgames.db.GameData;
 import org.chernovia.lib.netgames.roomserv.*;
@@ -23,8 +23,24 @@ public class AcroServ implements ConnListener {
 	String acroCmdPfx = "!", mgrCmdPfx = "~";
 	AcroGame[] games;
 	NetServ serv; 
+	long floodGate = 1500; 
+	int floodLimit = 3, floodTimeout = 99;
+	Vector<Flooder> floodList;
+	
+	class Flooder {
+		Connection conn; int times;
+		public Flooder(Connection c) {
+			conn = c; times = 1;
+		}
+	}
+	
+	public Flooder getFlooder(Connection c) {
+		for (Flooder f: floodList) if (f.conn.equals(c)) return f;
+		return null;
+	}
 	
 	public AcroServ(String name, String host, String oauth, String channel) {
+		floodList = new Vector<Flooder>();
 		initTwitch(name,host,oauth,channel);
 	}
 	
@@ -59,10 +75,34 @@ public class AcroServ implements ConnListener {
 		new GameData(AcroBase.newPlayer("Zippy")));
 		S.serv.startSrv();
 	}
+	
+	public boolean floodChk(Connection conn) {
+		if (conn.idleTime() < floodGate) {
+			Flooder f = getFlooder(conn); 
+			if (f != null) {
+				if (f.times++ > floodLimit) {
+					conn.tell("You have been banned for excess flooding. Augh.");
+					conn.ban(floodTimeout);
+				}
+				else conn.tell("Flood warning (" + f.times + "x)");
+			}
+			else {
+				conn.tell("Please don't send messages less than " + 
+				floodGate + " milliseconds apart.");
+				floodList.add(new Flooder(conn));
+			}
+			return true;
+		}
+		else {
+			Flooder f = getFlooder(conn); if (f != null) floodList.remove(f);
+			return false;
+		}
+	}
 
 	//only for direct tells/whispers
 	public boolean newMsg(Connection conn, String msg) {
-		System.out.println("New Message: " + conn + ": " + msg);
+		System.out.println("New Message: " + conn + ": " + msg + ", idle: " + conn.idleTime());
+		if (floodChk(conn)) return true;
 		AcroGame G = conn.getChan() >= 0 ? games[conn.getChan()] : null;
 		try {
 			if (msg.equals("") || msg.equals(mgrCmdPfx) || msg.equals(acroCmdPfx)) { 

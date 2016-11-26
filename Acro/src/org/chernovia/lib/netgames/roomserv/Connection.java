@@ -28,4 +28,6 @@ public interface Connection {
 	public void setRoom(Room r);
 	public int getChan();
 	public void setChan(int c);
+	public long idleTime();
+	public void ban(int seconds);
 }

@@ -11,9 +11,12 @@ public class TwitchServ extends PircBot implements NetServ {
 	
 	public static final int MAX_CHARS = 255; 
 	
-	class DummConn extends ConnAdapter {
-		public DummConn(NetServ server, String name) { 
+	class TwitchConn extends ConnAdapter {
+		public TwitchConn(NetServ server, String name) { 
 			super(server); setHandle(name);
+		}
+		public void ban(int seconds) {
+			sendRawLine("PRIVMSG " + channel + " :/timeout " + getHandle() + " " + seconds);
 		}
 	}
 	
@@ -44,7 +47,8 @@ public class TwitchServ extends PircBot implements NetServ {
 	
 	public void onWhisper(String channel, String sender, 
 	String login, String hostname, String message) {
-		newMsg(getConn(sender),message);
+		//newMsg(getConn(sender),message);
+		getConn(sender).handleMsg(message);
 	}
 	
 	public void onMessage(String channel, String sender, 
@@ -73,7 +77,7 @@ public class TwitchServ extends PircBot implements NetServ {
 	
 	public Connection getConn(String n) {
 		Connection c = getConnByHandle(n);
-		if (c == null) { c = new DummConn(this,n); loggedIn(c); }
+		if (c == null) { c = new TwitchConn(this,n); loggedIn(c); }
 		return c;
 	}
 	
@@ -86,7 +90,10 @@ public class TwitchServ extends PircBot implements NetServ {
 	}
 
 	public int getType() { return IRC; }
-	public boolean newMsg(Connection conn, String msg) { return game.newMsg(conn,msg); }
+	public boolean newMsg(Connection conn, String msg) { 
+		//((TwitchConn)conn).id
+		return game.newMsg(conn,msg); 
+	}
 	public void addConnListener(ConnListener l) { game = l; }
 	public void removeConnListener(ConnListener l) { game = null; }
 	public void loggedIn(Connection c) { conns.add(c); game.loggedIn(c); }
@@ -174,7 +181,6 @@ public class TwitchServ extends PircBot implements NetServ {
 		}
 		return s;
 	}
-	
 }
 
 

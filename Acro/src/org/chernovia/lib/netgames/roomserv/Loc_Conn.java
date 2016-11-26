@@ -16,6 +16,7 @@ public class Loc_Conn extends ConnAdapter {
 	private PrintWriter out;
 	private String prompt;
 	private boolean CONNECTED;
+	private long lastTell;
 
 	public Loc_Conn(Loc_Serv server, Socket socket) {
 		super(server);
@@ -27,7 +28,7 @@ public class Loc_Conn extends ConnAdapter {
 					sock.getInputStream()));
 		}
 		catch (IOException e) {	augh(e.toString());	}
-		CONNECTED = false; prompt = null;
+		CONNECTED = false; prompt = null; lastTell = 0;
 	}
 
 	public void setPrompt(String str) { prompt = str; }
@@ -87,6 +88,7 @@ public class Loc_Conn extends ConnAdapter {
 		else {
 			super.handleMsg(msg);
 		}
+		lastTell = System.currentTimeMillis();
 	}
 
 	private String getPromptCmd(String prom) {
@@ -112,5 +114,14 @@ public class Loc_Conn extends ConnAdapter {
 	}
 
 	public PrintWriter getOut() { return out; }
+	
+	public long idleTime() {
+		return System.currentTimeMillis() - lastTell;
+	}
+	
+	public void ban(int seconds) {
+		try { sock.close(); }
+		catch (IOException augh) {}
+	}
 
 }

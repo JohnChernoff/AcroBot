@@ -8,6 +8,7 @@ public abstract class ConnAdapter implements Connection, Runnable {
 	private Room room;
 	private String handle;
 	protected String response;
+	protected long lastTell;
 	private int verbosity, channel;
 	private boolean GUI, AUTO, BORG;
 	Thread askThread;
@@ -17,7 +18,7 @@ public abstract class ConnAdapter implements Connection, Runnable {
 		GUI = false; AUTO = false; BORG = false;
 		handle = "new"; room = null; response = null;
 		verbosity = MAX_VERB; channel = NO_CHAN;
-		askThread = null; channel = 0;
+		askThread = null; channel = 0; lastTell = 0;
 	}
 
 	class AskThread extends Thread {
@@ -36,6 +37,7 @@ public abstract class ConnAdapter implements Connection, Runnable {
 	public void run() {}
 	public void handleMsg(String msg) {
 		serv.newMsg(this,msg);
+		lastTell = System.currentTimeMillis();
 	}
 	public void tell(String msg) {
 		serv.tell(handle,msg,false,false);
@@ -118,5 +120,8 @@ public abstract class ConnAdapter implements Connection, Runnable {
 	@Override
 	public String toString() {
 		return getHandle();
+	}
+	public long idleTime() {
+		return System.currentTimeMillis() - lastTell;
 	}
 }
