@@ -10,6 +10,7 @@ repositories {
 }
 
 dependencies {
+  compile files("${System.properties['java.home']}/../lib/tools.jar")
   compile 'pircbot:pircbot:1.5.0'
   compile 'org.eclipse.jetty:jetty-server:9.2.17.v20160517'
   compile 'org.eclipse.jetty.websocket:websocket-server:9.2.17.v20160517'
