@@ -2,8 +2,7 @@ apply plugin: 'application'
 
 sourceCompatibility = 1.8
 version = 0.1
-mainClassName = "org.chernovia.net.games.parlour.acro.client.AcroApp"
-
+mainClassName = "org.chernovia.net.games.parlour.acro.server.AcroServ"
 
 repositories {
   mavenCentral()
@@ -18,3 +17,8 @@ dependencies {
   compile 'com.google.code.gson:gson:2.3.1'
 }
 
+run {
+  if (project.hasProperty("appArgs")) {
+    args Eval.me(appArgs)
+  }
+}
