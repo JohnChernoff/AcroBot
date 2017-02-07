@@ -1,4 +1,4 @@
-package org.duckstorm.common.javatools;
+package org.chernovia.lib.misc;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;

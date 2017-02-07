@@ -7,6 +7,7 @@ import org.chernovia.lib.misc.MiscUtil;
 import org.chernovia.lib.netgames.db.FieldData;
 import org.chernovia.lib.netgames.db.GameBase;
 import org.chernovia.lib.netgames.db.GameData;
+import org.chernovia.lib.netgames.zugserv.ZugServ;
 
 public class AcroBase extends GameBase {
 	//public static int MAXHAND=15, MAXTITLE=6;
@@ -31,25 +32,22 @@ public class AcroBase extends GameBase {
 		else return GameData.statHead() + CR + D.playStr();
 	}
 
-	public static void updateStats(
-			AcroGame G, AcroPlayer winner) {
-		int ratingavg = 0, rd = 0; AcroPlayer p = null;
+	public static void updateStats(AcroGame G, AcroPlayer winner) {
+		int ratingavg = 0, rd = 0;
 		int games, wins, rating, points, acros;
 		GameData D = null;
+		Vector<AcroPlayer> players = G.getPlayers();
 		//calc average rating of board
-		for (int x=0;x<G.getNumPlay();x++) {
-			p = G.getPlayer(x);
-			D = GameBase.getStats(
-					p.getName(),newPlayer(p.getName()));
+		for (AcroPlayer p : players) {
+			D = GameBase.getStats(p.getName(),newPlayer(p.getName()));
 			if (!winner.getName().equals(
 					D.getField("Handle"))) {
 				ratingavg += D.getIntField("rating");
 			}
 		}
-		if (G.getNumPlay() > 1) ratingavg /= (G.getNumPlay()-1);
+		if (players.size() > 1) ratingavg /= (players.size()-1);
 		//edit stats
-		for (int x=0;x<G.getNumPlay();x++) {
-			p = G.getPlayer(x);
+		for (AcroPlayer p : players) {
 			D = GameBase.getStats(p.getName(),newPlayer(p.getName()));
 			games = D.getIntField("games");
 			acros = D.getIntField("acros");
@@ -57,20 +55,19 @@ public class AcroBase extends GameBase {
 			wins = D.getIntField("wins");
 			rating = D.getIntField("rating");
 			D.setField("games",games + 1);
-			D.setField("acros",acros + p.sumacros());
+			D.setField("acros",acros); // + p.sumacros()); TODO: what's sumacros?!
 			D.setField("points",points + p.score);
 			rd = (ratingavg-rating);
 			if (rd > 180) rd = 180; else if (rd < -180) rd = -180;
 			if (p == winner) { //winner
 				D.setField("wins",wins + 1);
 				D.setField("rating",rating + (16 + (rd/12)));
-				G.getServ().broadcast(D.getHandle() +
+				G.getServ().broadcast(ZugServ.MSG_SERV,D.getHandle() +
 				" wins his/her " +	MiscUtil.getSuffix(wins+1) +
 				" Acrophobia game!");
 			}
 			else { //loser
-				D.setField("rating",rating - ((16 - (rd/12))/
-				(G.getNumPlay()-1))); //Hopefully > 0!
+				D.setField("rating",rating - ((16 - (rd/12))/(players.size()-1))); //Hopefully > 0!
 			}
 			GameBase.editStats(D);
 		}

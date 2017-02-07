@@ -1,1 +1,1 @@
-Haaaalp
+Rules: each round a randomly generated acronym is created. First, enter your own expansion by whispering '/w ZugNet (your acronym)'. Then, all acronyms are voted upon, and you can vote for one like so: '/w ZugNet (acro number). GLHF!

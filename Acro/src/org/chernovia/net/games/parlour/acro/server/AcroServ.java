@@ -5,11 +5,9 @@
 package org.chernovia.net.games.parlour.acro.server;
 
 import java.util.StringTokenizer;
-import java.util.Vector;
-
 import org.chernovia.lib.misc.MiscUtil;
 import org.chernovia.lib.netgames.db.GameData;
-import org.chernovia.lib.netgames.roomserv.*;
+import org.chernovia.lib.netgames.zugserv.*;
 
 public class AcroServ implements ConnListener {
 	static final String VERSION = "Version 0.1. Whee.";
@@ -22,46 +20,31 @@ public class AcroServ implements ConnListener {
 	static String ABCDEF = "res/deflet";
 	String acroCmdPfx = "!", mgrCmdPfx = "~";
 	AcroGame[] games;
-	NetServ serv; 
-	long floodGate = 1500; 
-	int floodLimit = 3, floodTimeout = 99;
-	Vector<Flooder> floodList;
-	
-	class Flooder {
-		Connection conn; int times;
-		public Flooder(Connection c) {
-			conn = c; times = 1;
-		}
-	}
-	
-	public Flooder getFlooder(Connection c) {
-		for (Flooder f: floodList) if (f.conn.equals(c)) return f;
-		return null;
-	}
+	ZugServ serv; 
 	
 	public AcroServ(String name, String host, String oauth, String channel) {
-		floodList = new Vector<Flooder>();
 		initTwitch(name,host,oauth,channel);
 	}
 	
 	public void initTwitch(String name, String host, String oauth, String channel) {
-		CR = NetServ.newline[NetServ.IRC] = "|";
 		serv = new TwitchServ(name,"irc.twitch.tv",oauth,"#zugaddict",this);
+		CR = "\n";
 		startGames(1);
 	}
 	
+	//TODO: implement this somehow
 	public void initLocal(int port) {
-		CR = NetServ.newline[NetServ.LOCAL];
-		serv = new Loc_Serv(port,this);
+		//CR = NetServ.newline[NetServ.LOCAL];
+		//serv = new Loc_Serv(port,this);
 		startGames(12);
 	}
 	
 	//TODO: games on different IRC channels
 	public void startGames(int n) {
-		serv.setMaxChannels(n); games = new AcroGame[n];
+		games = new AcroGame[n];
 		for (int i=0;i<games.length;i++) {
-			games[i] = new AcroGame(serv,i); //chan 0 = lobby for local games
-			if (serv.getType() != NetServ.LOCAL || i > 0) games[i].start();
+			games[i] = new AcroGame(serv,i);
+			games[i].start();
 		}
 	}
 
@@ -76,39 +59,24 @@ public class AcroServ implements ConnListener {
 		S.serv.startSrv();
 	}
 	
-	public boolean floodChk(Connection conn) {
-		if (conn.idleTime() < floodGate) {
-			Flooder f = getFlooder(conn); 
-			if (f != null) {
-				if (f.times++ > floodLimit) {
-					conn.tell("You have been banned for excess flooding. Augh.");
-					conn.ban(floodTimeout);
-				}
-				else conn.tell("Flood warning (" + f.times + "x)");
-			}
-			else {
-				conn.tell("Please don't send messages less than " + 
-				floodGate + " milliseconds apart.");
-				floodList.add(new Flooder(conn));
-			}
-			return true;
+	//TODO: this only returns one game, but conn could be in more than one channel
+	public AcroGame getGameByConn(Connection conn) {
+		for (int i=0;i<games.length;i++) {
+			if (conn.getChannels().contains(new Integer(games[i].getChan()))) return games[i];
 		}
-		else {
-			Flooder f = getFlooder(conn); if (f != null) floodList.remove(f);
-			return false;
-		}
+		return null;
 	}
-
+	
 	//only for direct tells/whispers
-	public boolean newMsg(Connection conn, String msg) {
-		System.out.println("New Message: " + conn + ": " + msg + ", idle: " + conn.idleTime());
-		if (floodChk(conn)) return true;
-		AcroGame G = conn.getChan() >= 0 ? games[conn.getChan()] : null;
+	public void newMsg(Connection conn, String msg) {
+		//System.out.println("New Message: " + conn + ": " + msg + ", idle: " + conn.idleTime());
+		if (conn.isFlooding(4, 1000)) return;
+		AcroGame G = getGameByConn(conn);
 		try {
 			if (msg.equals("") || msg.equals(mgrCmdPfx) || msg.equals(acroCmdPfx)) { 
-				conn.tell("Eh?"); 
+				conn.tell(ZugServ.MSG_SERV,"Eh?"); 
 			}
-			else if (msg.equals("?")) conn.tell(showCmds(),true,false);
+			else if (msg.equals("?")) conn.tell(ZugServ.MSG_SERV,showCmds());
 			else if (msg.startsWith(mgrCmdPfx)) {
 				mgrCmd(G,conn,msg.substring(1));
 			}
@@ -117,20 +85,17 @@ public class AcroServ implements ConnListener {
 			}
 			else {
 				if (G == null) {
-					conn.tell("Please enter a channel");
+					conn.tell(ZugServ.MSG_SERV,"Please enter a game");
 				}
 				else if (G.getMode() == AcroGame.MOD_PAUSE) {
-					conn.tell("Paused right now.");
+					conn.tell(ZugServ.MSG_SERV,"Paused right now.");
 				}
 				else gameTell(G,conn,msg);
-				return true;
 			}
-			return false;
 		}
 		catch (Exception augh) {
-			serv.broadcast("Augh: " + augh.getMessage());
+			serv.broadcast(ZugServ.MSG_SERV,"Augh: " + augh.getMessage());
 			augh.printStackTrace();
-			return false;
 		}
 	}
 
@@ -138,7 +103,7 @@ public class AcroServ implements ConnListener {
 		switch(G.getMode()) {
 		case AcroGame.MOD_ACRO:
 			if (!G.isLegal(msg.toUpperCase()))
-				conn.tell("Illegal acro: " + msg);
+				conn.tell(ZugServ.MSG_SERV,"Illegal acro: " + msg);
 			else G.newAcro(conn,msg);
 			break;
 		case AcroGame.MOD_VOTE: 
@@ -146,20 +111,20 @@ public class AcroServ implements ConnListener {
 			if (i > 0 && G.getNumAcros() >= i) {
 				G.newVote(conn,i-1);
 			}
-			else conn.tell("Bad vote.");
+			else conn.tell(ZugServ.MSG_SERV,"Bad vote.");
 			break;
 		case AcroGame.MOD_WAIT:
-			int p = G.getPlayer(conn.getHandle());
-			if (G.TOPICS && p >= 0 && G.getLastWin() == p) {
+			AcroPlayer p = G.getPlayer(conn.getHandle());
+			if (G.TOPICS && p != null && G.lastWin.equals(p)) {
 				G.newTopic(p,msg);
 			}
-			else conn.tell("Next round coming...");
+			else conn.tell(ZugServ.MSG_SERV,"Next round coming...");
 			break;
 		case AcroGame.MOD_NEW:
-			conn.tell("New game coming...");
+			conn.tell(ZugServ.MSG_SERV,"New game coming...");
 			break;
 		default:
-			conn.tell("Idle. Tell me " + acroCmdPfx + "start.");
+			conn.tell(ZugServ.MSG_SERV,"Idle. Tell me " + acroCmdPfx + "start.");
 		}
 	}
 
@@ -167,7 +132,7 @@ public class AcroServ implements ConnListener {
 		String handle = conn.getHandle();
 		if (AcroBase.searchFile(handle, MGRFILE) < 0 &&
 		(G == null || conn != G.getManager())) {
-			conn.tell("You're not a manager.");
+			conn.tell(ZugServ.MSG_SERV,"You're not a manager.");
 			return;
 		}
 		//general manager commands
@@ -175,15 +140,15 @@ public class AcroServ implements ConnListener {
 		cmd.length() > 7) {
 			String m = cmd.substring(6);
 			serv.send(m);
-			conn.tell("Spoofed: " + m);
+			conn.tell(ZugServ.MSG_SERV,"Spoofed: " + m);
 			return;
 		}
 		else if (cmd.equalsIgnoreCase("LETFILES")) {
-			conn.tell(AcroLetter.listFiles(),true,false); return;
+			conn.tell(ZugServ.MSG_SERV,AcroLetter.listFiles()); return;
 		}
 		//else if (cmd.equalsIgnoreCase("OFF")) {	System.exit(-1); }
 		if (G == null) {
-			conn.tell("No channel!"); return;
+			conn.tell(ZugServ.MSG_SERV,"No game!"); return;
 		}
 		StringTokenizer tokens = new StringTokenizer(cmd);
 		String s = tokens.nextToken();
@@ -194,14 +159,14 @@ public class AcroServ implements ConnListener {
 					G.setMode(AcroGame.MOD_RESET);
 					G.interrupt();
 				}
-				else conn.tell("First unpause me.");
+				else conn.tell(ZugServ.MSG_SERV,"First unpause me.");
 			}
 			else if (s.equalsIgnoreCase("IDLE")) {
 				if (G.getMode() != AcroGame.MOD_PAUSE) {
 					G.setMode(AcroGame.MOD_IDLE);
 					G.interrupt();
 				}
-				else conn.tell("First unpause me.");
+				else conn.tell(ZugServ.MSG_SERV,"First unpause me.");
 			}
 			else if (s.equalsIgnoreCase("PAUSE")) {
 				boolean wasIdling =
@@ -209,42 +174,42 @@ public class AcroServ implements ConnListener {
 				if (G.getMode() != AcroGame.MOD_PAUSE)
 					G.setMode(AcroGame.MOD_PAUSE);
 				if (!wasIdling) G.interrupt();
-				else serv.tch(G.getChan(),"Paused.",false,false);
+				else serv.tch(G.getChan(),ZugServ.MSG_SERV,"Paused.");
 			}
 			else if (s.equalsIgnoreCase("NEXT")) {
 				if (G.getMode() > AcroGame.MOD_IDLE) {
 					G.interrupt();
 				}
-				else conn.tell("Invalid Game State.");
+				else conn.tell(ZugServ.MSG_SERV,"Invalid Game State.");
 			}
 			else if (s.equalsIgnoreCase("SHOUTING")) {
 				G.SHOUTING = !G.SHOUTING;
-				serv.tch(G.getChan(),"Shouting: " + G.SHOUTING,false,false);
+				serv.tch(G.getChan(),ZugServ.MSG_SERV,"Shouting: " + G.SHOUTING);
 			}
 			else if (s.equalsIgnoreCase("FLATTIME")) {
 				G.FLATTIME = !G.FLATTIME;
-				serv.tch(G.getChan(),"Flat time: " + G.FLATTIME,false,false);
+				serv.tch(G.getChan(),ZugServ.MSG_SERV,"Flat time: " + G.FLATTIME);
 			}
 			else if (s.equalsIgnoreCase("REVEAL")) {
 				G.REVEAL = !G.REVEAL;
-				serv.tch(G.getChan(),"Reveal: " + G.REVEAL,false,false);
+				serv.tch(G.getChan(),ZugServ.MSG_SERV,"Reveal: " + G.REVEAL);
 			}
 			else if (s.equalsIgnoreCase("TOPICS")) {
 				G.TOPICS = !G.TOPICS;
-				serv.tch(G.getChan(),"Topics: " + G.TOPICS,false,false);
+				serv.tch(G.getChan(),ZugServ.MSG_SERV,"Topics: " + G.TOPICS);
 			}
 			else if (s.equalsIgnoreCase("TIEBONUS")) {
 				G.TIEBONUS = !G.TIEBONUS;
-				serv.tch(G.getChan(),"TieBonus: " + G.TIEBONUS,false,false);
+				serv.tch(G.getChan(),ZugServ.MSG_SERV,"TieBonus: " + G.TIEBONUS);
 			}
 			else if (s.equalsIgnoreCase("ADULT")) {
 				G.ADULT = !G.ADULT;
-				serv.tch(G.getChan(),"Adult: " + G.ADULT,false,false);
+				serv.tch(G.getChan(),ZugServ.MSG_SERV,"Adult: " + G.ADULT);
 			}
 			else if (s.equalsIgnoreCase("DUMP")) {
-				conn.tell(G.toString(),true,false);
+				conn.tell(ZugServ.MSG_SERV,G.toString());
 			}
-			else conn.tell("Oops: no such command.");
+			else conn.tell(ZugServ.MSG_SERV,"Oops: no such command.");
 			break;
 		case 1:
 			String a = tokens.nextToken();
@@ -252,7 +217,7 @@ public class AcroServ implements ConnListener {
 			if (s.equalsIgnoreCase("LOADLET")) {
 				G.newLetters(a);
 			}
-			else if (serv.getType() == NetServ.IRC && s.equalsIgnoreCase("CR")) { 
+			else if (serv.getType() == ZugServ.ServType.TYPE_TWITCH && s.equalsIgnoreCase("CR")) { 
 				((TwitchServ)serv).setTwitchCR(" " + a + " ");
 			}
 			//TODO: implement these!
@@ -272,9 +237,9 @@ public class AcroServ implements ConnListener {
 				G.waittime = i;
 				serv.tch(G.getChan(),"Wait Time: " + i,false);
 			} */
-			else conn.tell("D'oh: No such command.");
+			else conn.tell(ZugServ.MSG_SERV,"D'oh: No such command.");
 			break;
-		default: conn.tell("Too many tokens!");
+		default: conn.tell(ZugServ.MSG_SERV,"Too many tokens!");
 		}
 	}
 
@@ -285,15 +250,15 @@ public class AcroServ implements ConnListener {
 		switch (tokens.countTokens())  {
 		case 0:
 			if (s.equalsIgnoreCase("HELP")) {
-				//conn.tell(AcroBase.listFile(HELPFILE),true);
-				conn.tell("Rules: each round a randomly generated acronym " + 
-				"is created.  First, enter your own expansion by whispering " +
-				"'/w ZugNet (your acronym)'.  Then, all acronyms are voted upon, and " +
-				"you can vote for one like so: '/w ZugNet (acro number).  GLHF!");
+				conn.tell(ZugServ.MSG_SERV,AcroBase.listFile(HELPFILE));
+				//conn.tell("Rules: each round a randomly generated acronym " + 
+				//"is created.  First, enter your own expansion by whispering " +
+				//"'/w ZugNet (your acronym)'.  Then, all acronyms are voted upon, and " +
+				//"you can vote for one like so: '/w ZugNet (acro number).  GLHF!");
 			}
 			else if (s.equalsIgnoreCase("START"))  {
 				if (G == null) {
-					conn.tell("No channel!");
+					conn.tell(ZugServ.MSG_SERV,"No game!");
 				}
 				else if (G.getMode() == AcroGame.MOD_IDLE) {
 					G.setManager(conn);
@@ -301,56 +266,53 @@ public class AcroServ implements ConnListener {
 					G.interrupt();
 				}
 				else if (G.getMode() >= AcroGame.MOD_NEW) {
-					conn.tell("Already playing!");
+					conn.tell(ZugServ.MSG_SERV,"Already playing!");
 				}
-				else conn.tell("Current mode: " + G.getMode());
+				else conn.tell(ZugServ.MSG_SERV,"Current mode: " + G.getMode());
 			}
-			else if (s.equalsIgnoreCase("WHO")) {
-				conn.tell(serv.who(),true,false);
-			}
+			//else if (s.equalsIgnoreCase("WHO")) { conn.tell(serv.who(),true,false);	}
 			else if (s.equalsIgnoreCase("VERSION")) {
-				conn.tell(VERSION);
+				conn.tell(ZugServ.MSG_SERV,VERSION);
 			}
-			else if (s.equalsIgnoreCase("VARS") ||
-					s.equalsIgnoreCase("INFO")) {
-				if (G == null) conn.tell("No channel!");
+			else if (s.equalsIgnoreCase("VARS") || s.equalsIgnoreCase("INFO")) {
+				if (G == null) conn.tell(ZugServ.MSG_SERV,"No game!");
 				else {
-					if (conn.isGUI()) G.dumpAll(conn); 
-					else conn.tell(G.listVars(),true,false);
+					//if (conn.isGUI()) G.dumpAll(conn); 
+					conn.tell("vardump",G.listVars());
 				}
 			}
 			else if (s.equalsIgnoreCase("LETTERS")) {
-				if (G == null) conn.tell("No channel!");
-				else conn.tell(G.showLetters(),true,false);
+				if (G == null) conn.tell(ZugServ.MSG_SERV,"No game!");
+				else conn.tell(ZugServ.MSG_SERV,G.showLetters());
 			}
 			else if (s.equalsIgnoreCase("ACRO")) {
-				if (G == null) conn.tell("No channel!");
-				else conn.tell("Current Acro: " + G.getAcro());
+				if (G == null) conn.tell(ZugServ.MSG_SERV,"No game!");
+				else conn.tell(ZugServ.MSG_SERV,"Current Acro: " + G.getAcro());
 			}
 			else if (s.equalsIgnoreCase("FINGER")) {
-				conn.tell(AcroBase.statLine(
-				AcroBase.getStats(handle,null)),true,false);
+				conn.tell(ZugServ.MSG_SERV,AcroBase.statLine(
+				AcroBase.getStats(handle,null)));
 			}
 			else if (s.equalsIgnoreCase("TOPTEN")) {
-				conn.tell(AcroBase.topTen("wins"),true,false);
+				conn.tell(ZugServ.MSG_SERV,AcroBase.topTen("wins"));
 			}
 			else if (s.equalsIgnoreCase("MANAGERS")) {
-				conn.tell(AcroBase.listFile(MGRFILE),true,false);
+				conn.tell(ZugServ.MSG_SERV,AcroBase.listFile(MGRFILE));
 			}
-			else conn.tell("Bad command. Erp.");
+			else conn.tell(ZugServ.MSG_SERV,"Bad command. Erp.");
 			break;
 		case 1:
 			if (s.equalsIgnoreCase("FINGER")) {
-				conn.tell(AcroBase.statLine(
-				AcroBase.getStats(tokens.nextToken(),null)),true,false);
+				conn.tell(ZugServ.MSG_SERV,AcroBase.statLine(
+				AcroBase.getStats(tokens.nextToken(),null)));
 			}
 			else if (s.equalsIgnoreCase("TOPTEN")) {
-				conn.tell(AcroBase.topTen(
-				tokens.nextToken()),true,false);
+				conn.tell(ZugServ.MSG_SERV,AcroBase.topTen(
+				tokens.nextToken()));
 			}
-			else conn.tell("Bad command. Erp.");
+			else conn.tell(ZugServ.MSG_SERV,"Bad command. Erp.");
 			break;
-		default: conn.tell("Too many tokens!");
+		default: conn.tell(ZugServ.MSG_SERV,"Too many tokens!");
 		}
 	}
 	
@@ -384,10 +346,10 @@ public class AcroServ implements ConnListener {
 	}
 
 	public void loggedIn(Connection conn) {
-		if (serv.getType() == NetServ.LOCAL) {
-			((Loc_Conn)conn).setPrompt(">");
-			conn.tell("Welcome, " + conn.getHandle() + "!");
-			conn.tell("Commands: who, shout (msg), ch (channel)");
+		if (serv.getType() == ZugServ.ServType.TYPE_WEBSOCK) {
+			//((Loc_Conn)conn).setPrompt(">");
+			conn.tell(ZugServ.MSG_SERV,"Welcome, " + conn.getHandle() + "!");
+			conn.tell(ZugServ.MSG_SERV,"Commands: who, shout (msg), ch (channel)");
 		}
 	};
 	public void disconnected(Connection conn) {};

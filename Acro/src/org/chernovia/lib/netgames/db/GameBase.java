@@ -10,8 +10,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.StringTokenizer;
-
-import org.duckstorm.common.javatools.IOUtil;
+import org.chernovia.lib.misc.IOUtil;
 
 //TODO: create blank file if no datafile is found
 abstract public class GameBase extends IOUtil {

@@ -12,8 +12,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.StringTokenizer;
-
-import org.duckstorm.common.javatools.IOUtil;
+import org.chernovia.lib.misc.IOUtil;
 
 public class HiScoreDB {
 	public static String CR = System.getProperty("line.separator");

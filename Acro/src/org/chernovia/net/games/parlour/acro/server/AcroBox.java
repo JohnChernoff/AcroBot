@@ -7,6 +7,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.net.URL;
 import java.util.StringTokenizer;
+import java.util.Vector;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -64,30 +65,30 @@ public class AcroBox extends JFrame {
 		return buffImg;
 	}
 		
-	public void updateScores(int numPlayers, AcroPlayer[] players) {
-		String[] playlist = new String[players.length];
-		for (int i=0;i<numPlayers;i++) playlist[i] = 
-				players[i].getName() + ": " + players[i].score;
-		makeList(scorePan,numPlayers,playlist);
+	public void updateScores(Vector<AcroPlayer> players) {
+		String[] playlist = new String[players.size()];
+		int i=0; for (AcroPlayer p : players) playlist[i++] = p.conn.getHandle() + ": " + p.score;
+		makeList(scorePan,playlist);
 	}
 	
-	public void updateAcros(int numacros, AcroGame.AcroList[] acrolist) {
-		String[] acros = new String[acrolist.length]; 
-		for (int i=0; i<numacros; i++) acros[i] = (i+1) + "." + acrolist[i].acro;
-		makeList(acroPan,numacros,acros);
+	public void updateAcros(Vector<AcroGame.Acro> acrolist) {
+		String[] acros = new String[acrolist.size()];
+		int i=0; for (AcroGame.Acro acro : acrolist) acros[i++] = (i) + "." + acro.acro;
+		makeList(acroPan,acros);
 	}
 	
-	private void makeList(AcroPanel pan, int numItems, String[] list) {
-		if (numItems < 1) return;
+	//TODO: measure Fonts more intelligently
+	private void makeList(AcroPanel pan, String[] list) {
+		if (list.length < 1) return;
 		Graphics g = pan.getContext();
 		g.setColor(Color.BLACK);
 		g.fillRect(0, 0, pan.getWidth(), pan.getHeight());
 		g.setColor(Color.WHITE); 
 		g.draw3DRect(1, 1, pan.getWidth()-2, pan.getHeight()-2,true);
-		int ySpace = pan.getHeight() / numItems;
-		int y = 8 + list.length - numItems;
+		int ySpace = pan.getHeight() / list.length;
+		int y = 20 - list.length;
 		g.setFont(new Font(Font.MONOSPACED,Font.BOLD,(int)(y/1.5)));
-		for (int i = 0; i < numItems; i++) {
+		for (int i = 0; i < list.length; i++) {
 			g.setColor(rndColor());
 			g.drawString(list[i], 8, y);
 			y += ySpace;
