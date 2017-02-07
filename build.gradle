@@ -1,0 +1,19 @@
+apply plugin: 'application'
+
+sourceCompatibility = 1.8
+version = 0.1
+mainClassName = "org.chernovia.net.games.parlour.acro.client.AcroApp"
+
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  compile 'pircbot:pircbot:1.5.0'
+  compile 'org.eclipse.jetty:jetty-server:9.2.17.v20160517'
+  compile 'org.eclipse.jetty.websocket:websocket-server:9.2.17.v20160517'
+  compile 'org.eclipse.jetty.websocket:websocket-servlet:9.2.17.v20160517'
+  compile 'com.google.code.gson:gson:2.3.1'
+}
+
