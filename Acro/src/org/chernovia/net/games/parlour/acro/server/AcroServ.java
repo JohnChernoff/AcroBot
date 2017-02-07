@@ -1,6 +1,6 @@
 //TODO: 
-//history is a bit wonky (spam, topics, etc)
-//line breaks are weird for voting results
+//(re)implement acro histories
+//line breaks are sometimes weird for voting results
 
 package org.chernovia.net.games.parlour.acro.server;
 
@@ -23,23 +23,14 @@ public class AcroServ implements ConnListener {
 	ZugServ serv; 
 	
 	public AcroServ(String name, String host, String oauth, String channel) {
-		initTwitch(name,host,oauth,channel);
+		serv = new TwitchServ(name,"irc.twitch.tv",oauth,"#zugaddict",this); 
 	}
 	
-	public void initTwitch(String name, String host, String oauth, String channel) {
-		serv = new TwitchServ(name,"irc.twitch.tv",oauth,"#zugaddict",this);
-		CR = "\n";
-		startGames(1);
+	public AcroServ(int port) {
+		serv = new WebSockServ(port,this); 
 	}
 	
-	//TODO: implement this somehow
-	public void initLocal(int port) {
-		//CR = NetServ.newline[NetServ.LOCAL];
-		//serv = new Loc_Serv(port,this);
-		startGames(12);
-	}
-	
-	//TODO: games on different IRC channels
+	//starts the game threads, but doesn't start the gameplay (which is begun with the "!start" user cmd) 
 	public void startGames(int n) {
 		games = new AcroGame[n];
 		for (int i=0;i<games.length;i++) {
@@ -47,19 +38,28 @@ public class AcroServ implements ConnListener {
 			games[i].start();
 		}
 	}
+	
+	public static void log(String msg) { System.out.println(msg); }
 
 	public static void main(String[] args) {
-		//AcroServ S = new AcroServ(args.length > 0 ? Integer.parseInt(args[0]) : 5678);
-		AcroServ S = new AcroServ(args[0],args[1],args[2],args[3]);
+		AcroServ bot = null;
+		if (args.length == 4) { CR = "\n"; bot = new AcroServ(args[0],args[1],args[2],args[3]); }
+		else if (args.length == 1) { CR = "\n"; bot = new AcroServ(Integer.parseInt(args[0])); }
+		else { log("Error: Invalid number of arguments"); System.exit(-1); }
 		AcroBase.CR = CR;
 		AcroBase.DATAFILE = DATAFILE;
 		GameData.initData(AcroBase.initFields());
-		AcroBase.editStats( //just a test
-		new GameData(AcroBase.newPlayer("Zippy")));
-		S.serv.startSrv();
+		AcroBase.editStats(new GameData(AcroBase.newPlayer("Zippy"))); //just a test
+		bot.serv.startSrv();
+		switch (bot.serv.getType()) {
+			case TYPE_TWITCH: bot.startGames(1); break;
+			case TYPE_WEBSOCK: bot.startGames(12); break;
+			default: log("Error: unknown server type");
+		}
+		
 	}
 	
-	//TODO: this only returns one game, but conn could be in more than one channel
+	//NOTE: this only returns one game, but conn could be in more than one channel
 	public AcroGame getGameByConn(Connection conn) {
 		for (int i=0;i<games.length;i++) {
 			if (conn.getChannels().contains(new Integer(games[i].getChan()))) return games[i];
@@ -211,32 +211,30 @@ public class AcroServ implements ConnListener {
 			}
 			else conn.tell(ZugServ.MSG_SERV,"Oops: no such command.");
 			break;
-		case 1:
-			String a = tokens.nextToken();
-			//int i = Integer.parseInt(a);
+		case 1: //TODO: some bounds checking would be nice on these  
+			String a = tokens.nextToken(); int i = Integer.parseInt(a);
 			if (s.equalsIgnoreCase("LOADLET")) {
 				G.newLetters(a);
 			}
 			else if (serv.getType() == ZugServ.ServType.TYPE_TWITCH && s.equalsIgnoreCase("CR")) { 
 				((TwitchServ)serv).setTwitchCR(" " + a + " ");
 			}
-			//TODO: implement these!
-			/*else if (s.equalsIgnoreCase("CHANNEL")) {
-				serv.tch(G.getChan(),"New Channel: " + i,false);
-				G.setChan(i);
-			}
-			else if (s.equalsIgnoreCase("ACROTIME")) {
-				G.acrotime = i;
-				serv.tch(G.getChan(),"Acro Time: " + i,false);
+			else if (s.equalsIgnoreCase("ACROTIME")) { 
+				G.setAcrotime(i); 
+				serv.tch(G.getChan(),ZugServ.MSG_SERV,"Acro Time: " + i);
 			}
 			else if (s.equalsIgnoreCase("VOTETIME")) {
-				G.votetime = i;
-				serv.tch(G.getChan(),"Vote Time: " + i,false);
+				G.setVotetime(i);
+				serv.tch(G.getChan(),ZugServ.MSG_SERV,"Vote Time: " + i);
 			}
 			else if (s.equalsIgnoreCase("WAITTIME")) {
-				G.waittime = i;
-				serv.tch(G.getChan(),"Wait Time: " + i,false);
-			} */
+				G.setWaittime(i);
+				serv.tch(G.getChan(),ZugServ.MSG_SERV,"Wait Time: " + i);
+			} 
+			//else if (s.equalsIgnoreCase("CHANNEL")) {
+			//	serv.tch(G.getChan(),"New Channel: " + i,false);
+			//	G.setChan(i);
+			//}
 			else conn.tell(ZugServ.MSG_SERV,"D'oh: No such command.");
 			break;
 		default: conn.tell(ZugServ.MSG_SERV,"Too many tokens!");
@@ -347,7 +345,6 @@ public class AcroServ implements ConnListener {
 
 	public void loggedIn(Connection conn) {
 		if (serv.getType() == ZugServ.ServType.TYPE_WEBSOCK) {
-			//((Loc_Conn)conn).setPrompt(">");
 			conn.tell(ZugServ.MSG_SERV,"Welcome, " + conn.getHandle() + "!");
 			conn.tell(ZugServ.MSG_SERV,"Commands: who, shout (msg), ch (channel)");
 		}

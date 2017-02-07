@@ -630,12 +630,18 @@ public class AcroGame extends Thread {
 		return SB.toString();
 	}
 	
+	//getter/setters, whee
 	Connection getManager() { return manager; }
 	void setManager(Connection mgr) { manager = mgr; }
 	int getMode() { return mode; }
 	void setMode(int m) { mode = m; }
 	int getChan() { return chan; }
-	int getAcroTime() { return acrotime; }
+	int getAcrotime() { return acrotime; }
+	void setAcrotime(int t) { acrotime = t; }
+	int getVotetime() { return votetime; } //note there is also a getVoteTime() method
+	void setVotetime(int t) { votetime = t; }
+	int getWaittime() { return waittime; }
+	void setWaittime(int t) { waittime = t; }
 	int getMaxRound() { return maxround; }
 	ZugServ getServ() { return serv; }
 	String getAcro() { return acro; }

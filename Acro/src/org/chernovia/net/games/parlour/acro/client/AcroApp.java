@@ -10,7 +10,7 @@ import org.chernovia.lib.misc.MiscUtil;
 public class AcroApp extends Frame implements 
 ActionListener, KeyListener, Runnable {
 	
-	public static void main(String[] args ) {
+	public static void main(String[] args) {
 		AcroApp F = new AcroApp();
 		F.setSize(1200, 800);
 		F.init();
