@@ -182,10 +182,6 @@ public class AcroServ implements ConnListener {
 				}
 				else conn.tell(ZugServ.MSG_SERV,"Invalid Game State.");
 			}
-			else if (s.equalsIgnoreCase("SHOUTING")) {
-				G.SHOUTING = !G.SHOUTING;
-				serv.tch(G.getChan(),ZugServ.MSG_SERV,"Shouting: " + G.SHOUTING);
-			}
 			else if (s.equalsIgnoreCase("FLATTIME")) {
 				G.FLATTIME = !G.FLATTIME;
 				serv.tch(G.getChan(),ZugServ.MSG_SERV,"Flat time: " + G.FLATTIME);

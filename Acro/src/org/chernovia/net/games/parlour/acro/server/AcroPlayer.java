@@ -4,6 +4,8 @@ import java.util.Vector;
 
 import org.chernovia.lib.netgames.zugserv.Connection;
 
+import com.google.gson.JsonObject;
+
 public class AcroPlayer {
 
 	class AcroRec {
@@ -28,5 +30,12 @@ public class AcroPlayer {
 			//conn.getServ().tch(game.getChan(), getName() + " voted for: " + game.getPlayer(vote).getName(),false,false);
 		}
 		if (acros < game.getMaxRound()) acros++;
+	}
+	
+	public JsonObject toJson() {
+		JsonObject p = new JsonObject();
+		p.addProperty("name",conn.getHandle());
+		p.addProperty("score",score);
+		return p;
 	}
 }
