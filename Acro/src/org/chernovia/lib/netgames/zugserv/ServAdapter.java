@@ -21,7 +21,7 @@ public abstract class ServAdapter implements ZugServ {
         log("Accepting connection #" + conns.size());
 		conns.add(conn);
 		conn.setStatus(Connection.STATUS_LOGIN);
-		textTell(conn,ZugServ.MSG_SERV,"Hello! Please enter your name."); 
+		conn.tell(ZugServ.MSG_SERV,"Hello! Please enter your name."); 
 	}
 	
 	public void loggedIn(Connection conn) {
@@ -76,7 +76,15 @@ public abstract class ServAdapter implements ZugServ {
 		else if (cmd.equalsIgnoreCase("WHO")) {
 			String list = "Currently connected: " + CR;
 			for (Connection c: conns) list += c.getHandle() + CR; 
-			textTell(conn, ZugServ.MSG_SERV, list);
+			conn.tell(ZugServ.MSG_SERV, list);
+		}
+		else if (cmd.equalsIgnoreCase("-CH") && tokens.length == 2) {
+			if (conn.partChan(Integer.parseInt(tokens[1]))) conn.tell(ZugServ.MSG_SERV, "Exited channel.");
+				else conn.tell(ZugServ.MSG_SERV, "Unknown channel.");
+		}
+		else if (cmd.equalsIgnoreCase("+CH") && tokens.length == 2) {
+			if (conn.joinChan(Integer.parseInt(tokens[1]))) conn.tell(ZugServ.MSG_SERV, "Entered channel.");
+			else conn.tell(ZugServ.MSG_SERV, "Unknown channel.");
 		}
 		else handled = false;
 		if (!handled) listener.newMsg(conn, msg);
@@ -109,20 +117,13 @@ public abstract class ServAdapter implements ZugServ {
 		}
 	}
 	
-	private void textTell(Connection conn, String type, String msg) {
-		JsonObject obj = new JsonObject();
-		obj.add("type", new JsonPrimitive(type));
-		obj.add("msg",new JsonPrimitive(msg));
-		conn.tell(ZugServ.MSG_TXT,obj.toString());
-	}
-	
 	//TODO: look up password
 	private void password(Connection conn, String pwd) {
 		if (isLegalPwd(pwd)) {
 			loggedIn(conn);
 		}
 		else {
-			textTell(conn,ZugServ.MSG_ERR,"Invalid password - try again!");
+			conn.tell(ZugServ.MSG_ERR,"Invalid password - try again!");
 		}
 	}
 	
@@ -136,7 +137,7 @@ public abstract class ServAdapter implements ZugServ {
 			else loggedIn(conn);
 		}
 		else {
-			textTell(conn,ZugServ.MSG_ERR,"Invalid handle - try again!");
+			conn.tell(ZugServ.MSG_ERR,"Invalid handle - try again!");
 		}
 	}
 	
@@ -159,13 +160,13 @@ public abstract class ServAdapter implements ZugServ {
 	}
 		
 	private void pTell(Connection sender, Connection receiver, String msg) {
-		if (receiver == null) { textTell(sender,ZugServ.MSG_ERR,"No such handle"); return; }
+		if (receiver == null) { sender.tell(ZugServ.MSG_ERR,"No such handle"); return; }
 		JsonObject obj = new JsonObject();
 		obj.add("type", new JsonPrimitive(ZugServ.MSG_PRIV));
 		obj.add("sender",new JsonPrimitive(sender.getHandle()));
 		obj.add("msg",new JsonPrimitive(msg));
 		receiver.tell(ZugServ.MSG_TXT,obj.toString());
-		textTell(sender,ZugServ.MSG_SERV,"Told " + receiver.getHandle() + ".");
+		sender.tell(ZugServ.MSG_SERV,"Told " + receiver.getHandle() + ".");
 	}
 	
 	private void log(String msg) { log(msg,true); }

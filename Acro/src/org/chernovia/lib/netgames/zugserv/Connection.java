@@ -23,6 +23,6 @@ public interface Connection {
 	public int getStatus();
 	public void setStatus(int status);
 	public Vector<Integer> getChannels();
-	public void joinChan(int chan);
-	public void partChan(int chan);
+	public boolean joinChan(int chan);
+	public boolean partChan(int chan);
 }

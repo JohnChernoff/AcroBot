@@ -61,7 +61,7 @@ public class AcroGame extends Thread {
 	boolean FLATTIME,REVEAL,TIEBONUS,TOPICS,ADULT;
 	boolean TESTING = false;
 	AcroPlayer lastWin;
-	AcroBox box;
+	TwitchBox box;
 	
 	//TODO: add different types for different situations
 	public void tell(Connection conn, String msg) { conn.tell("pTell", msg); };
@@ -135,8 +135,9 @@ public class AcroGame extends Thread {
 	public AcroGame(ZugServ srv, int c) {
 		manager = null;	serv = srv; chan = c;
 		if (serv.getType() == ZugServ.ServType.TYPE_TWITCH) {
-			box = new AcroBox(); box.setVisible(true); 
+			box = new TwitchBox(); box.setVisible(true); 
 		}
+		else box = null;
 	}
 
 	private void initGame() {
@@ -171,8 +172,8 @@ public class AcroGame extends Thread {
 				else idle();
 				tch("New Game Starting!"); int deserted = 0;
 				while (mode > MOD_NEW) {
-					box.updateHiScores(new StringTokenizer( //just for the colors
-					AcroBase.topTen("wins"),AcroServ.CR));
+					if (box != null) 
+					box.updateHiScores(new StringTokenizer(AcroBase.topTen("wins"),AcroServ.CR)); //just for the colors
 					acrolist = new Vector<Acro>();
 					round++;
 					acroRound(); 
@@ -231,7 +232,7 @@ public class AcroGame extends Thread {
 	private void acroRound() {
 		if (mode > MOD_IDLE) mode = MOD_ACRO; else return;
 		if (topic != NO_TOPIC) tch("Topic: " + topic);
-		acro = makeAcro(acrolen); box.updateAcro(acro, topic);
+		acro = makeAcro(acrolen); if (box != null) box.updateAcro(acro, topic);
 		int t = makeAcroTime();
 		tch("Round " + round + " Acro: " + acro + AcroServ.CR + 
 		"You have " + t + " seconds.");
@@ -324,7 +325,7 @@ public class AcroGame extends Thread {
 		if (topic != NO_TOPIC) tch("Topic: " + topic);
 		tch(showAcros()); 
 		if (serv.getType() == ZugServ.ServType.TYPE_WEBSOCK) tch("acrodump",dumpAcros().toString());
-		box.updateAcros(acrolist); 
+		if (box != null) box.updateAcros(acrolist); 
 		int t=getVoteTime(); 
 		tch("Time to vote!  Enter the number of an acro above. " +
 		AcroServ.CR + "You have " + t + " seconds.");
@@ -337,7 +338,7 @@ public class AcroGame extends Thread {
 		if (topic != NO_TOPIC) tch("Topic: " + topic);
 		tch(showVote(false));
 		tch(showScore());
-		box.updateScores(players);
+		if (box != null) box.updateScores(players);
 		AcroPlayer winner = winCheck(); //System.out.println(w);
 		if (winner == null) waitRound();
 		else  {
@@ -415,8 +416,7 @@ public class AcroGame extends Thread {
 
 	private String showVote(boolean fancyformat) {
 		String CR = AcroServ.CR;
-		StringBuffer S = new StringBuffer(CR + "Round " +
-				round + " Voting Results: " + CR + CR);
+		StringBuffer S = new StringBuffer(CR + "Round " + round + " Voting Results: " + CR + CR);
 		int acrocol = maxcol - (votecol + longhand);
 		if (fancyformat) for (Acro a: acrolist) {
 			int h = a.author.getName().length();
@@ -566,7 +566,7 @@ public class AcroGame extends Thread {
 		else {
 			AcroPlayer p = new AcroPlayer(this,conn); players.add(p);
 			conn.tell(ZugServ.MSG_SERV,"Welcome!");
-			box.updateScores(players);
+			if (box != null) box.updateScores(players);
 			return p;
 		}
 	}

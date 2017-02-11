@@ -56,8 +56,12 @@ public abstract class ConnAdapter implements Connection {
 	}
 	
 	public Vector<Integer> getChannels() { return channels;	}
-	public void joinChan(int c) { channels.addElement(new Integer(c)); }
-	public void partChan(int c) { channels.remove(new Integer(c)); }
+	public boolean joinChan(int c) { 
+		Integer chan = new Integer(c);
+		if (c >= 0 && !channels.contains(chan)) { channels.addElement(new Integer(c)); return true; }
+		else return false;
+	}
+	public boolean partChan(int c) { return channels.remove(new Integer(c)); }
 	//public boolean inChan(int c) { return channels.contains(new Integer(c)); }
 
 }

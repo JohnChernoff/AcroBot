@@ -44,7 +44,7 @@ public class AcroServ implements ConnListener {
 	public static void main(String[] args) {
 		AcroServ bot = null;
 		if (args.length == 4) { CR = "\n"; bot = new AcroServ(args[0],args[1],args[2],args[3]); }
-		else if (args.length == 1) { CR = "\n"; bot = new AcroServ(Integer.parseInt(args[0])); }
+		else if (args.length == 1) { CR = "\r"; bot = new AcroServ(Integer.parseInt(args[0])); }
 		else { log("Error: Invalid number of arguments"); System.exit(-1); }
 		AcroBase.CR = CR;
 		AcroBase.DATAFILE = DATAFILE;

@@ -12,7 +12,7 @@ import java.util.Vector;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
-public class AcroBox extends JFrame {
+public class TwitchBox extends JFrame {
 	private static final long serialVersionUID = 1L;
 
 	public class AcroPanel extends JPanel {
@@ -35,7 +35,7 @@ public class AcroBox extends JFrame {
 	//should these be JTables?
 	AcroPanel scorePan, acroPan, highPan, helpPan; 
 	
-	public AcroBox() {
+	public TwitchBox() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setSize(width,height); //this.setType(Window.Type.UTILITY);
 		scorePan = new AcroPanel(); scorePan.setSize(width/3,height/2); 
