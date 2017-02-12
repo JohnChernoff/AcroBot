@@ -64,9 +64,9 @@ public class AcroGame extends Thread {
 	TwitchBox box;
 	
 	//TODO: add different types for different situations
-	public void tell(Connection conn, String msg) { conn.tell("pTell", msg); };
+	public void tell(Connection conn, String msg) { conn.tell("ptell", msg); };
 	public void tell(Connection conn, String type, String msg) { conn.tell(type, msg); }
-	public void tch(String msg) { tch("cTell", msg); }
+	public void tch(String msg) { tch("ctell", msg); }
 	public void tch(String type,String msg) { serv.tch(chan, type, msg); }
 	
 	public int getNumAcros() { return acrolist.size(); }
@@ -144,7 +144,7 @@ public class AcroGame extends Thread {
 		mode = MOD_IDLE; newLetters(AcroServ.ABCDEF);
 		if (TESTING) { acrotime = 20; votetime = 10; waittime = 5; }
 		else { acrotime = 90; votetime = 60; waittime = 30;	}
-		atimevar = 6; vtimevar = 6; basetime = 20;
+		atimevar = 6; vtimevar = 6; basetime = 30;
 		winscore = 30; speedpts = 2;
 		maxacro = 8; minacro = 3;
 		maxcol = 60; votecol = 10;

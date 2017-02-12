@@ -1,16 +1,28 @@
 //TODO: 
 //(re)implement acro histories
 //line breaks are sometimes weird for voting results
-
+//static variables everywhere, ugh.  Perhaps should refactor things and pass AcroServ to games (instead of serv)
+//get rid of Acrobase and use mySQL or whatevs, sheesh
 package org.chernovia.net.games.parlour.acro.server;
 
+import java.util.ArrayList;
 import java.util.StringTokenizer;
 import org.chernovia.lib.misc.MiscUtil;
 import org.chernovia.lib.netgames.db.GameData;
 import org.chernovia.lib.netgames.zugserv.*;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+
 public class AcroServ implements ConnListener {
+	
+	public class AcroChan {
+		String name;
+		int index;
+		public AcroChan(String n, int i) { name = n; index = i; }
+	}
 	static final String VERSION = "Version 0.1. Whee.";
+	static final String[] defaultChannels = { "General","Clean","Adult","Chess","Twitch"};
 	static String CR;
 	static String DATAFILE = "res/acrodata.txt";
 	static String ACROLOG = "res/acrolog.txt";
@@ -18,16 +30,25 @@ public class AcroServ implements ConnListener {
 	static String TOPFILE = "res/topics.txt";
 	static String HELPFILE = "res/acrohelp.txt";
 	static String ABCDEF = "res/deflet";
-	String acroCmdPfx = "!", mgrCmdPfx = "~";
+	ArrayList<AcroChan> channelMap; 
+	String acroCmdPfx = "!", mgrCmdPfx = "~", chanTellPfx = "$";
+
 	AcroGame[] games;
 	ZugServ serv; 
 	
 	public AcroServ(String name, String host, String oauth, String channel) {
-		serv = new TwitchServ(name,"irc.twitch.tv",oauth,"#zugaddict",this); 
+		serv = new TwitchServ(name,"irc.twitch.tv",oauth,"#zugaddict",this);  
+		CR = "\n"; initChannels();
 	}
 	
 	public AcroServ(int port) {
-		serv = new WebSockServ(port,this); 
+		serv = new WebSockServ(port,this);  
+		CR = "\r"; initChannels();
+	}
+	
+	public void initChannels() {
+		channelMap = new ArrayList<AcroChan>();
+		for (int i=0;i<defaultChannels.length;i++) channelMap.add(new AcroChan(defaultChannels[i],i));
 	}
 	
 	//starts the game threads, but doesn't start the gameplay (which is begun with the "!start" user cmd) 
@@ -43,8 +64,8 @@ public class AcroServ implements ConnListener {
 
 	public static void main(String[] args) {
 		AcroServ bot = null;
-		if (args.length == 4) { CR = "\n"; bot = new AcroServ(args[0],args[1],args[2],args[3]); }
-		else if (args.length == 1) { CR = "\r"; bot = new AcroServ(Integer.parseInt(args[0])); }
+		if (args.length == 4) bot = new AcroServ(args[0],args[1],args[2],args[3]); 
+		else if (args.length == 1) bot = new AcroServ(Integer.parseInt(args[0])); 
 		else { log("Error: Invalid number of arguments"); System.exit(-1); }
 		AcroBase.CR = CR;
 		AcroBase.DATAFILE = DATAFILE;
@@ -52,11 +73,10 @@ public class AcroServ implements ConnListener {
 		AcroBase.editStats(new GameData(AcroBase.newPlayer("Zippy"))); //just a test
 		bot.serv.startSrv();
 		switch (bot.serv.getType()) {
-			case TYPE_TWITCH: bot.startGames(1); break;
-			case TYPE_WEBSOCK: bot.startGames(12); break;
-			default: log("Error: unknown server type");
-		}
-		
+		case TYPE_TWITCH: bot.startGames(1); break;
+		case TYPE_WEBSOCK: bot.startGames(bot.channelMap.size()); break;
+		default: log("Error: unknown server type");
+	}
 	}
 	
 	//NOTE: this only returns one game, but conn could be in more than one channel
@@ -73,7 +93,7 @@ public class AcroServ implements ConnListener {
 		if (conn.isFlooding(4, 1000)) return;
 		AcroGame G = getGameByConn(conn);
 		try {
-			if (msg.equals("") || msg.equals(mgrCmdPfx) || msg.equals(acroCmdPfx)) { 
+			if (msg.equals("") || msg.equals(mgrCmdPfx) || msg.equals(acroCmdPfx) || msg.equals(chanTellPfx)) { 
 				conn.tell(ZugServ.MSG_SERV,"Eh?"); 
 			}
 			else if (msg.equals("?")) conn.tell(ZugServ.MSG_SERV,showCmds());
@@ -82,6 +102,9 @@ public class AcroServ implements ConnListener {
 			}
 			else if (msg.startsWith(acroCmdPfx)) {
 				acroCmd(G,conn,msg.substring(1));
+			}
+			else if (msg.startsWith(chanTellPfx)) {
+				for (Integer c : conn.getChannels()) games[c].tch(conn.getHandle() + " says: " + msg.substring(1));
 			}
 			else {
 				if (G == null) {
@@ -115,7 +138,7 @@ public class AcroServ implements ConnListener {
 			break;
 		case AcroGame.MOD_WAIT:
 			AcroPlayer p = G.getPlayer(conn.getHandle());
-			if (G.TOPICS && p != null && G.lastWin.equals(p)) {
+			if (G.TOPICS && p != null && G.lastWin != null && G.lastWin.equals(p)) {
 				G.newTopic(p,msg);
 			}
 			else conn.tell(ZugServ.MSG_SERV,"Next round coming...");
@@ -338,12 +361,55 @@ public class AcroServ implements ConnListener {
 		acroCmdPfx + "topten" + CR +
 		"";
 	}
+	
+	public JsonArray getChannels() {
+		JsonArray chanlist = new JsonArray();
+		for (AcroChan channel : channelMap) {
+			JsonObject obj = new JsonObject();
+			obj.addProperty("index", channel.index);
+			obj.addProperty("name", channel.name);
+			chanlist.add(obj);
+		}
+		return chanlist;
+	}
 
 	public void loggedIn(Connection conn) {
 		if (serv.getType() == ZugServ.ServType.TYPE_WEBSOCK) {
 			conn.tell(ZugServ.MSG_SERV,"Welcome, " + conn.getHandle() + "!");
-			conn.tell(ZugServ.MSG_SERV,"Commands: who, shout (msg), ch (channel)");
+			//conn.tell(ZugServ.MSG_SERV,"Commands: who, shout (msg), ch (channel)");
+			conn.tell("chanlist", getChannels().toString());
 		}
 	};
-	public void disconnected(Connection conn) {};
+	
+	public void disconnected(Connection conn) {}
+
+	@Override
+	public void joinChan(Connection conn, int chan) {
+		if (serv.getType() == ZugServ.ServType.TYPE_WEBSOCK) {
+			changeChannel(conn,"joinchan",chan);
+			JsonArray chanlist = new JsonArray();
+			for (Connection c : serv.getAllConnections()) if (c.getChannels().contains(chan)) {
+				JsonObject obj = new JsonObject();
+				obj.addProperty("name",c.getHandle());
+				chanlist.add(obj);
+			}
+			conn.tell("chanlist",chanlist.toString());
+		}
+	}
+
+	@Override
+	public void partChan(Connection conn, int chan) {
+		if (serv.getType() == ZugServ.ServType.TYPE_WEBSOCK) changeChannel(conn,"partchan",chan);
+	};
+	
+	public void changeChannel(Connection conn, String change, int chan) {
+		for (Connection c : serv.getAllConnections()) {
+			if (c.getChannels().contains(chan)) {
+				JsonObject obj = new JsonObject();
+				obj.addProperty("name",conn.getHandle());
+				obj.addProperty("chan",chan);
+				c.tell(change,obj.toString());
+			}
+		}
+	}
 }

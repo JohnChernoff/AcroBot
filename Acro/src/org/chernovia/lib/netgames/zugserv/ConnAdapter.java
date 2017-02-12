@@ -62,6 +62,5 @@ public abstract class ConnAdapter implements Connection {
 		else return false;
 	}
 	public boolean partChan(int c) { return channels.remove(new Integer(c)); }
-	//public boolean inChan(int c) { return channels.contains(new Integer(c)); }
 
 }

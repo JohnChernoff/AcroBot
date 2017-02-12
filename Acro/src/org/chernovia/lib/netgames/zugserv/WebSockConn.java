@@ -63,10 +63,13 @@ public class WebSockConn extends ConnAdapter {
 	@Override
 	public InetAddress getAddress() { return session.getRemoteAddress().getAddress(); }
 	
+	/**
+	 * The type argument determines if msg is plaintext or a JSON string. Sort of confusing.  Ergh.  Sorry. 
+	 */
 	@Override
 	public void tell(String type, String msg) {
 		JsonObject obj = new JsonObject();
-		obj.add(type, new JsonPrimitive(msg));
+		obj.addProperty(type,msg); //obj.add(type, new JsonPrimitive(msg));
 		String message = obj.toString();
 		try {
 			if (VERBOSE) log("Sending: " + message);

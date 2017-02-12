@@ -14,7 +14,7 @@ public abstract class ServAdapter implements ZugServ {
 	private PrintWriter log =  new PrintWriter(System.out,true);
 	private int max_conn = 999;
 	
-	public ServAdapter(ConnListener l) { listener = l; }
+	public ServAdapter(ConnListener l) { listener = l; } //TODO: should this support multiple listeners?
 	
 	public void connect(Connection conn) {
 		Vector<Connection> conns = getAllConnections();
@@ -79,11 +79,13 @@ public abstract class ServAdapter implements ZugServ {
 			conn.tell(ZugServ.MSG_SERV, list);
 		}
 		else if (cmd.equalsIgnoreCase("-CH") && tokens.length == 2) {
-			if (conn.partChan(Integer.parseInt(tokens[1]))) conn.tell(ZugServ.MSG_SERV, "Exited channel.");
+			int c = Integer.parseInt(tokens[1]);
+			if (conn.partChan(c)) listener.partChan(conn,c);
 				else conn.tell(ZugServ.MSG_SERV, "Unknown channel.");
 		}
 		else if (cmd.equalsIgnoreCase("+CH") && tokens.length == 2) {
-			if (conn.joinChan(Integer.parseInt(tokens[1]))) conn.tell(ZugServ.MSG_SERV, "Entered channel.");
+			int c = Integer.parseInt(tokens[1]);
+			if (conn.joinChan(c)) listener.joinChan(conn,c);
 			else conn.tell(ZugServ.MSG_SERV, "Unknown channel.");
 		}
 		else handled = false;
