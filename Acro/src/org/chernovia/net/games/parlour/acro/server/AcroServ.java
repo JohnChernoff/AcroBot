@@ -21,14 +21,15 @@ public class AcroServ implements ConnListener {
 		int index;
 		public AcroChan(String n, int i) { name = n; index = i; }
 	}
-	static final String VERSION = "Version 0.1. Whee.";
+	static final String VERSION = "Version 0.1. Whee.", NOCHAN_MSG = "Error: not in a channel. Please join one.";
 	static final String[] defaultChannels = { "General","Clean","Adult","Chess","Twitch"};
 	static String CR;
 	static String DATAFILE = "res/acrodata.txt";
 	static String ACROLOG = "res/acrolog.txt";
 	static String MGRFILE = "res/managers.txt";
 	static String TOPFILE = "res/topics.txt";
-	static String HELPFILE = "res/acrohelp.txt";
+	static String TWITHELP = "res/twithelp.txt";
+	static String SOCKHELP = "res/sockhelp.txt";
 	static String ABCDEF = "res/deflet";
 	ArrayList<AcroChan> channelMap; 
 	String acroCmdPfx = "!", mgrCmdPfx = "~", chanTellPfx = "$";
@@ -171,7 +172,7 @@ public class AcroServ implements ConnListener {
 		}
 		//else if (cmd.equalsIgnoreCase("OFF")) {	System.exit(-1); }
 		if (G == null) {
-			conn.tell(ZugServ.MSG_SERV,"No game!"); return;
+			conn.tell(ZugServ.MSG_SERV,NOCHAN_MSG); return;
 		}
 		StringTokenizer tokens = new StringTokenizer(cmd);
 		String s = tokens.nextToken();
@@ -267,15 +268,15 @@ public class AcroServ implements ConnListener {
 		switch (tokens.countTokens())  {
 		case 0:
 			if (s.equalsIgnoreCase("HELP")) {
-				conn.tell(ZugServ.MSG_SERV,AcroBase.listFile(HELPFILE));
-				//conn.tell("Rules: each round a randomly generated acronym " + 
-				//"is created.  First, enter your own expansion by whispering " +
-				//"'/w ZugNet (your acronym)'.  Then, all acronyms are voted upon, and " +
-				//"you can vote for one like so: '/w ZugNet (acro number).  GLHF!");
+				switch(serv.getType()) {
+					case TYPE_TWITCH: conn.tell(ZugServ.MSG_SERV,AcroBase.listFile(TWITHELP)); break;
+					case TYPE_WEBSOCK: conn.tell(ZugServ.MSG_SERV,AcroBase.listFile(SOCKHELP)); break;
+					default:
+				}
 			}
 			else if (s.equalsIgnoreCase("START"))  {
 				if (G == null) {
-					conn.tell(ZugServ.MSG_SERV,"No game!");
+					conn.tell(ZugServ.MSG_SERV,NOCHAN_MSG);
 				}
 				else if (G.getMode() == AcroGame.MOD_IDLE) {
 					G.setManager(conn);
@@ -292,18 +293,18 @@ public class AcroServ implements ConnListener {
 				conn.tell(ZugServ.MSG_SERV,VERSION);
 			}
 			else if (s.equalsIgnoreCase("VARS") || s.equalsIgnoreCase("INFO")) {
-				if (G == null) conn.tell(ZugServ.MSG_SERV,"No game!");
+				if (G == null) conn.tell(ZugServ.MSG_SERV,NOCHAN_MSG);
 				else {
 					//if (conn.isGUI()) G.dumpAll(conn); 
 					conn.tell("vardump",G.listVars());
 				}
 			}
 			else if (s.equalsIgnoreCase("LETTERS")) {
-				if (G == null) conn.tell(ZugServ.MSG_SERV,"No game!");
+				if (G == null) conn.tell(ZugServ.MSG_SERV,NOCHAN_MSG);
 				else conn.tell(ZugServ.MSG_SERV,G.showLetters());
 			}
 			else if (s.equalsIgnoreCase("ACRO")) {
-				if (G == null) conn.tell(ZugServ.MSG_SERV,"No game!");
+				if (G == null) conn.tell(ZugServ.MSG_SERV,NOCHAN_MSG);
 				else conn.tell(ZugServ.MSG_SERV,"Current Acro: " + G.getAcro());
 			}
 			else if (s.equalsIgnoreCase("FINGER")) {
@@ -381,25 +382,25 @@ public class AcroServ implements ConnListener {
 		}
 	};
 	
-	public void disconnected(Connection conn) {}
+	public void disconnected(Connection conn) {
+		for (Integer chan : conn.getChannels())	partChan(conn,chan);
+	}
 
 	@Override
 	public void joinChan(Connection conn, int chan) {
 		if (serv.getType() == ZugServ.ServType.TYPE_WEBSOCK) {
+			games[chan].tch("playlist",games[chan].dumpPlayers().toString()); 
 			changeChannel(conn,"joinchan",chan);
-			JsonArray chanlist = new JsonArray();
-			for (Connection c : serv.getAllConnections()) if (c.getChannels().contains(chan)) {
-				JsonObject obj = new JsonObject();
-				obj.addProperty("name",c.getHandle());
-				chanlist.add(obj);
-			}
-			conn.tell("chanlist",chanlist.toString());
 		}
 	}
 
 	@Override
 	public void partChan(Connection conn, int chan) {
-		if (serv.getType() == ZugServ.ServType.TYPE_WEBSOCK) changeChannel(conn,"partchan",chan);
+		if (serv.getType() == ZugServ.ServType.TYPE_WEBSOCK) {
+			games[chan].removePlayer(games[chan].getPlayer(conn.getHandle())); //leave channel = leave game
+			games[chan].tch("playlist",games[chan].dumpPlayers().toString()); 
+			changeChannel(conn,"partchan",chan);
+		}
 	};
 	
 	public void changeChannel(Connection conn, String change, int chan) {

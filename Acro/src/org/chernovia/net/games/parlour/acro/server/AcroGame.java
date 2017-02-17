@@ -1,5 +1,7 @@
 package org.chernovia.net.games.parlour.acro.server;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.StringTokenizer;
 import java.util.Vector;
@@ -97,26 +99,32 @@ public class AcroGame extends Thread {
 		return dump;
 	}
 	
-	private JsonObject dumpPlayers() {
-		JsonObject dump = new JsonObject();
-		JsonArray playArr = new JsonArray();
-		for (AcroPlayer p : players) playArr.add(p.toJson());
-		dump.add("playlist",playArr); 
-		return dump;
-	}	
-	
-	private JsonObject dumpAcros() {
-		JsonObject dump = new JsonObject();
-		JsonArray acroArr = new JsonArray();
-		for (Acro a : acrolist) acroArr.add(a.toJson());
-		dump.add("acrolist", acroArr);
-		return dump;
+	public JsonArray dumpPlayers() {
+		ArrayList<AcroPlayer> playlist = new ArrayList<AcroPlayer>();
+		for (Connection conn : serv.getAllConnections()) {
+			if (conn.getChannels().contains(chan)) {
+				AcroPlayer p = getPlayer(conn.getHandle());
+				if (p != null) playlist.add(p);
+				else playlist.add(new AcroPlayer(this,conn)); //fake it till ya make it
+			}
+		}
+		Collections.sort(playlist);
+		JsonArray players = new JsonArray();
+		for (AcroPlayer p : playlist) players.add(p.toJson());
+		return players;
 	}
 	
+	private JsonArray dumpAcros() {
+		JsonArray acroArr = new JsonArray();
+		for (Acro a : acrolist) acroArr.add(a.toJson());
+		return acroArr;
+	}
+	
+	//TODO: make some sense of this
 	private void updateAll() {
-		tch("gamedump",dumpGame().toString());
-		tch("vardump",dumpVars().toString());
-		tch("playdump",dumpPlayers().toString());
+		//tch("gamedump",dumpGame().toString());
+		//tch("vardump",dumpVars().toString());
+		//tch("playdump",dumpPlayers().toString());
 	}
 	
 	public AcroPlayer getPlayer(String name) {
@@ -559,7 +567,7 @@ public class AcroGame extends Thread {
 		else tch("Loaded Letter File: " + ABCFILE);
 	}
 
-	private AcroPlayer addNewPlayer(Connection conn) {
+	public AcroPlayer addNewPlayer(Connection conn) {
 		if (players.size() > maxplay)  {
 			conn.tell(ZugServ.MSG_SERV,"Game Full!?"); return null;
 		}
@@ -568,6 +576,13 @@ public class AcroGame extends Thread {
 			conn.tell(ZugServ.MSG_SERV,"Welcome!");
 			if (box != null) box.updateScores(players);
 			return p;
+		}
+	}
+	
+	public void removePlayer(AcroPlayer p) {
+		if (p != null) {
+			players.remove(p); //TODO: fix all the bugs this probably causes
+			tch("playlist",dumpPlayers().toString());
 		}
 	}
 

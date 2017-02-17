@@ -1,0 +1,15 @@
+Rules: 
+
+Each round a randomly generated acronym is created. Enter your own expansion like so:
+
+(acroym: TGIF)
+
+Tell the server: 'There's gerbils in Freezer'
+Or: 'Then Germany invaded France' 
+Or: 'Trump's Government isn't funny'
+
+You get the idea.
+
+Then, all acronyms are voted upon by entering the number of a listed acronym. 
+
+GLHF!

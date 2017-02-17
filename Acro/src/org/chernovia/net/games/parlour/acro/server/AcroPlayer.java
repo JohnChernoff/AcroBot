@@ -6,7 +6,7 @@ import org.chernovia.lib.netgames.zugserv.Connection;
 
 import com.google.gson.JsonObject;
 
-public class AcroPlayer {
+public class AcroPlayer implements Comparable<AcroPlayer> {
 
 	class AcroRec {
 		AcroGame.Acro acro; AcroPlayer vote; 
@@ -37,5 +37,10 @@ public class AcroPlayer {
 		p.addProperty("name",conn.getHandle());
 		p.addProperty("score",score);
 		return p;
+	}
+
+	@Override
+	public int compareTo(AcroPlayer p) {
+		return this.score - p.score;
 	}
 }
