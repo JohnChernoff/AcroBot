@@ -13,6 +13,7 @@ import org.chernovia.lib.netgames.zugserv.ZugServ;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+//Acro!
 public class AcroGame extends Thread {
 	static final String	NO_TOPIC = "", NO_ACRO = "";
 	static final int

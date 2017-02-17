@@ -21,7 +21,7 @@ public class AcroServ implements ConnListener {
 		int index;
 		public AcroChan(String n, int i) { name = n; index = i; }
 	}
-	static final String VERSION = "Version 0.1. Whee.", NOCHAN_MSG = "Error: not in a channel. Please join one.";
+	static final String VERSION = "Version 0.1a. Whee.", NOCHAN_MSG = "Error: not in a channel. Please join one.";
 	static final String[] defaultChannels = { "General","Clean","Adult","Chess","Twitch"};
 	static String CR;
 	static String DATAFILE = "res/acrodata.txt";
