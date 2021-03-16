@@ -15,7 +15,7 @@ import java.util.Random;
 import java.util.StringTokenizer;
 import java.util.Vector;
 import javax.imageio.ImageIO;
-import org.chernovia.lib.misc.IOUtil;
+//import org.chernovia.lib.misc.IOUtil;
 
 //TODO: get rid of strToInt
 

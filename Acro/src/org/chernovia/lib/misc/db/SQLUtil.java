@@ -174,7 +174,7 @@ public class SQLUtil {
 		ResultSet RS = getRS(sqlstr);
 		if (RS == null) return null;
 		try {
-			do vdata.add(new Integer(RS.getInt(1)));
+			do vdata.add(RS.getInt(1));
 			while (RS.next());
 		}
 		catch (SQLException e) { sqlError(e); return null; }

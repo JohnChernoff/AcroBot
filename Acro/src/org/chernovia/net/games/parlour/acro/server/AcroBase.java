@@ -4,10 +4,10 @@ import java.util.StringTokenizer;
 import java.util.Vector;
 
 import org.chernovia.lib.misc.MiscUtil;
+import org.chernovia.lib.net.zugserv.ZugServ;
 import org.chernovia.lib.netgames.db.FieldData;
 import org.chernovia.lib.netgames.db.GameBase;
 import org.chernovia.lib.netgames.db.GameData;
-import org.chernovia.lib.netgames.zugserv.ZugServ;
 
 public class AcroBase extends GameBase {
 	//public static int MAXHAND=15, MAXTITLE=6;

@@ -8,9 +8,14 @@ package org.chernovia.net.games.parlour.acro.server;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 import org.chernovia.lib.misc.MiscUtil;
+import org.chernovia.lib.net.zugserv.ConnListener;
+import org.chernovia.lib.net.zugserv.Connection;
+import org.chernovia.lib.net.zugserv.DiscordServ;
+import org.chernovia.lib.net.zugserv.TwitchServ;
+import org.chernovia.lib.net.zugserv.WebSockServ;
+import org.chernovia.lib.net.zugserv.ZugServ;
+import org.chernovia.lib.netgames.db.GameBase;
 import org.chernovia.lib.netgames.db.GameData;
-import org.chernovia.lib.netgames.zugserv.*;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
@@ -47,6 +52,11 @@ public class AcroServ implements ConnListener {
 		CR = "\r"; initChannels();
 	}
 	
+	public AcroServ(String token) {
+		serv = new DiscordServ(token,this);
+		CR = "\n"; 
+	}
+	
 	public void initChannels() {
 		channelMap = new ArrayList<AcroChan>();
 		for (int i=0;i<defaultChannels.length;i++) channelMap.add(new AcroChan(defaultChannels[i],i));
@@ -66,7 +76,7 @@ public class AcroServ implements ConnListener {
 	public static void main(String[] args) {
 		AcroServ bot = null;
 		if (args.length == 4) bot = new AcroServ(args[0],args[1],args[2],args[3]); 
-		else if (args.length == 1) bot = new AcroServ(Integer.parseInt(args[0])); 
+		else if (args.length == 1) bot = new AcroServ(args[0]); //new AcroServ(Integer.parseInt(args[0])); 
 		else { log("Error: Invalid number of arguments"); System.exit(-1); }
 		AcroBase.CR = CR;
 		AcroBase.DATAFILE = DATAFILE;
@@ -74,25 +84,26 @@ public class AcroServ implements ConnListener {
 		AcroBase.editStats(new GameData(AcroBase.newPlayer("Zippy"))); //just a test
 		bot.serv.startSrv();
 		switch (bot.serv.getType()) {
-		case TYPE_TWITCH: bot.startGames(1); break;
-		case TYPE_WEBSOCK: bot.startGames(bot.channelMap.size()); break;
-		default: log("Error: unknown server type");
-	}
+			case TYPE_TWITCH: bot.startGames(1); break;
+			case TYPE_WEBSOCK: bot.startGames(bot.channelMap.size()); break;
+			case TYPE_DISCORD: bot.startGames(bot.serv.getMaxChannels()); break;
+			default: log("Error: unknown server type");
+		}
 	}
 	
 	//NOTE: this only returns one game, but conn could be in more than one channel
 	public AcroGame getGameByConn(Connection conn) {
 		for (int i=0;i<games.length;i++) {
-			if (conn.getChannels().contains(new Integer(games[i].getChan()))) return games[i];
+			if (conn.getChannels().contains(games[i].getChan())) return games[i];
 		}
 		return null;
 	}
 	
 	//only for direct tells/whispers
-	public void newMsg(Connection conn, String msg) {
-		//System.out.println("New Message: " + conn + ": " + msg + ", idle: " + conn.idleTime());
+	public void newMsg(Connection conn, int chan, String msg) {
+		System.out.println("New Message: " + conn + ": " + msg); // + ", idle: " + conn.idleTime());
 		if (conn.isFlooding(4, 1000)) return;
-		AcroGame G = getGameByConn(conn);
+		AcroGame G = (chan != ZugServ.NO_CHAN) ? games[chan] : getGameByConn(conn);
 		try {
 			if (msg.equals("") || msg.equals(mgrCmdPfx) || msg.equals(acroCmdPfx) || msg.equals(chanTellPfx)) { 
 				conn.tell(ZugServ.MSG_SERV,"Eh?"); 
@@ -102,7 +113,7 @@ public class AcroServ implements ConnListener {
 				mgrCmd(G,conn,msg.substring(1));
 			}
 			else if (msg.startsWith(acroCmdPfx)) {
-				acroCmd(G,conn,msg.substring(1));
+				acroCmd(G,conn,chan,msg.substring(1));
 			}
 			else if (msg.startsWith(chanTellPfx)) {
 				for (Integer c : conn.getChannels()) games[c].tch(conn.getHandle() + " says: " + msg.substring(1));
@@ -114,7 +125,7 @@ public class AcroServ implements ConnListener {
 				else if (G.getMode() == AcroGame.MOD_PAUSE) {
 					conn.tell(ZugServ.MSG_SERV,"Paused right now.");
 				}
-				else gameTell(G,conn,msg);
+				else gameTell(G,chan,conn,msg);
 			}
 		}
 		catch (Exception augh) {
@@ -123,11 +134,11 @@ public class AcroServ implements ConnListener {
 		}
 	}
 
-	private void gameTell(AcroGame G, Connection conn, String msg) {
+	private void gameTell(AcroGame G, int chan, Connection conn, String msg) {
 		switch(G.getMode()) {
 		case AcroGame.MOD_ACRO:
-			if (!G.isLegal(msg.toUpperCase()))
-				conn.tell(ZugServ.MSG_SERV,"Illegal acro: " + msg);
+			//if (chan==ZugServ.NO_CHAN) { conn.tell(ZugServ.MSG_SERV, "Please tell me your acros in private messages!");}
+			if (!G.isLegal(msg.toUpperCase())) conn.tell(ZugServ.MSG_SERV,"Illegal acro: " + msg);
 			else G.newAcro(conn,msg);
 			break;
 		case AcroGame.MOD_VOTE: 
@@ -160,13 +171,13 @@ public class AcroServ implements ConnListener {
 			return;
 		}
 		//general manager commands
-		if (cmd.toUpperCase().startsWith("SPOOF") &&
+		/* if (cmd.toUpperCase().startsWith("SPOOF") &&
 		cmd.length() > 7) {
 			String m = cmd.substring(6);
 			serv.send(m);
 			conn.tell(ZugServ.MSG_SERV,"Spoofed: " + m);
 			return;
-		}
+		} */
 		else if (cmd.equalsIgnoreCase("LETFILES")) {
 			conn.tell(ZugServ.MSG_SERV,AcroLetter.listFiles()); return;
 		}
@@ -261,7 +272,9 @@ public class AcroServ implements ConnListener {
 		}
 	}
 
-	private void acroCmd(AcroGame G, Connection conn, String msg) {
+	private void acroCmd(AcroGame G, Connection conn, int chan, String msg) {
+		System.out.println("AcroCMD: " + msg + ", " + G);
+		//conn.tell(ZugServ.MSG_SERV,"Your command: " + msg);
 		String handle = conn.getHandle();
 		StringTokenizer tokens = new StringTokenizer(msg);
 		String s = tokens.nextToken();
@@ -312,7 +325,7 @@ public class AcroServ implements ConnListener {
 				AcroBase.getStats(handle,null)));
 			}
 			else if (s.equalsIgnoreCase("TOPTEN")) {
-				conn.tell(ZugServ.MSG_SERV,AcroBase.topTen("wins"));
+				conn.tell(ZugServ.MSG_SERV,GameBase.topTen("wins"));
 			}
 			else if (s.equalsIgnoreCase("MANAGERS")) {
 				conn.tell(ZugServ.MSG_SERV,AcroBase.listFile(MGRFILE));
@@ -382,11 +395,6 @@ public class AcroServ implements ConnListener {
 		}
 	};
 	
-	public void disconnected(Connection conn) {
-		for (Integer chan : conn.getChannels())	partChan(conn,chan);
-	}
-
-	@Override
 	public void joinChan(Connection conn, int chan) {
 		if (serv.getType() == ZugServ.ServType.TYPE_WEBSOCK) {
 			games[chan].tch("playlist",games[chan].dumpPlayers().toString()); 
@@ -394,7 +402,7 @@ public class AcroServ implements ConnListener {
 		}
 	}
 
-	@Override
+
 	public void partChan(Connection conn, int chan) {
 		if (serv.getType() == ZugServ.ServType.TYPE_WEBSOCK) {
 			games[chan].removePlayer(games[chan].getPlayer(conn.getHandle())); //leave channel = leave game
@@ -404,7 +412,7 @@ public class AcroServ implements ConnListener {
 	};
 	
 	public void changeChannel(Connection conn, String change, int chan) {
-		for (Connection c : serv.getAllConnections()) {
+		for (Connection c : serv.getAllConnections(true)) {
 			if (c.getChannels().contains(chan)) {
 				JsonObject obj = new JsonObject();
 				obj.addProperty("name",conn.getHandle());
@@ -412,5 +420,11 @@ public class AcroServ implements ConnListener {
 				c.tell(change,obj.toString());
 			}
 		}
+	}
+
+
+	@Override
+	public void disconnected(Connection conn) {
+		for (Integer chan : conn.getChannels())	partChan(conn,chan);
 	}
 }

@@ -6,9 +6,11 @@ import java.util.List;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
+import org.chernovia.lib.misc.IOUtil;
 import org.chernovia.lib.misc.MiscUtil;
-import org.chernovia.lib.netgames.zugserv.Connection;
-import org.chernovia.lib.netgames.zugserv.ZugServ;
+import org.chernovia.lib.net.zugserv.Connection;
+import org.chernovia.lib.net.zugserv.ZugServ;
+import org.chernovia.lib.netgames.db.GameBase;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -102,7 +104,7 @@ public class AcroGame extends Thread {
 	
 	public JsonArray dumpPlayers() {
 		ArrayList<AcroPlayer> playlist = new ArrayList<AcroPlayer>();
-		for (Connection conn : serv.getAllConnections()) {
+		for (Connection conn : serv.getAllConnections(true)) {
 			if (conn.getChannels().contains(chan)) {
 				AcroPlayer p = getPlayer(conn.getHandle());
 				if (p != null) playlist.add(p);
@@ -138,7 +140,7 @@ public class AcroGame extends Thread {
 	}
 	
 	public boolean inChan(Connection conn, int c) {
-		return conn.getChannels().contains(new Integer(c));
+		return conn.getChannels().contains(c);
 	}
 	
 	public AcroGame(ZugServ srv, int c) {
@@ -181,8 +183,9 @@ public class AcroGame extends Thread {
 				else idle();
 				tch("New Game Starting!"); int deserted = 0;
 				while (mode > MOD_NEW) {
-					if (box != null) 
-					box.updateHiScores(new StringTokenizer(AcroBase.topTen("wins"),AcroServ.CR)); //just for the colors
+					if (box != null)  {
+						box.updateHiScores(new StringTokenizer(GameBase.topTen("wins"),AcroServ.CR));//just for the colors
+					}
 					acrolist = new Vector<Acro>();
 					round++;
 					acroRound(); 
@@ -240,7 +243,7 @@ public class AcroGame extends Thread {
 
 	private void acroRound() {
 		if (mode > MOD_IDLE) mode = MOD_ACRO; else return;
-		if (topic != NO_TOPIC) tch("Topic: " + topic);
+		if (!topic.equals(NO_TOPIC)) tch("Topic: " + topic);
 		acro = makeAcro(acrolen); if (box != null) box.updateAcro(acro, topic);
 		int t = makeAcroTime();
 		tch("Round " + round + " Acro: " + acro + AcroServ.CR + 
@@ -373,23 +376,20 @@ public class AcroGame extends Thread {
 	}
 
 	private void getTopics() {
-		List<String> topicvec = AcroBase.readFile(AcroServ.TOPFILE);
+		List<String> topicvec = IOUtil.readFile(AcroServ.TOPFILE);
 		int lof = topicvec.size();
 		int[] toplist = new int[maxtopic];
 		for (int x=0;x<maxtopic;x++) {
 			boolean match;
 			do {
 				match = false;
-				toplist[x] = MiscUtil.randInt(lof-1);
-				//System.out.println("Topic #" + x + ": " +
-				//toplist[x]);
+				toplist[x] = MiscUtil.randInt(lof-1); //System.out.println("Topic #" + x + ": " + toplist[x]);
 				for (int y=x-1;y>=0;y--)
 					if (toplist[x] == toplist[y]) match = true;
 			} while (match);
 		}
 		for (int t=0;t<maxtopic;t++)
-			topics[t] = topicvec.get(toplist[t]);
-		//topics[MAXTOPIC-1] = DEFTOPIC;
+			topics[t] = topicvec.get(toplist[t]); //topics[MAXTOPIC-1] = DEFTOPIC;
 	}
 
 	private String showTopics() {

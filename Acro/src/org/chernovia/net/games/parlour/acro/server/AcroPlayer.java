@@ -1,9 +1,7 @@
 package org.chernovia.net.games.parlour.acro.server;
 
 import java.util.Vector;
-
-import org.chernovia.lib.netgames.zugserv.Connection;
-
+import org.chernovia.lib.net.zugserv.Connection;
 import com.google.gson.JsonObject;
 
 public class AcroPlayer implements Comparable<AcroPlayer> {
