@@ -63,7 +63,7 @@ public class AcroLetter {
 			String fn = files[f].getName();
 			int i = fn.indexOf(".");
 			if (i>0 && fn.substring(i).equalsIgnoreCase(LETTEXT))
-				SB.append(fn + AcroServ.CR);
+				SB.append(fn + AcroServ.newLine);
 		}
 		return SB.toString();
 	}

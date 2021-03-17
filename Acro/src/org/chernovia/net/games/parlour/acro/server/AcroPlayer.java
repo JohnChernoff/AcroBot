@@ -24,7 +24,7 @@ public class AcroPlayer implements Comparable<AcroPlayer> {
 
 	public void save(AcroGame.Acro a, AcroPlayer v) {
 		record.add(new AcroRec(a,v));
-		if (game.REVEAL && vote >= 0) { //TODO: no clue what I was trying to do here
+		if (game.reveal && vote >= 0) { //TODO: no clue what I was trying to do here
 			//conn.getServ().tch(game.getChan(), getName() + " voted for: " + game.getPlayer(vote).getName(),false,false);
 		}
 		if (acros < game.getMaxRound()) acros++;

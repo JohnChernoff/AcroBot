@@ -4,6 +4,7 @@ import java.awt.*;
 
 public class AcroCan extends Canvas {
 	
+	private static final long serialVersionUID = 1L;
 	private Image[] letters;
 	private String acro = "acrophobia";
 	Color color;
